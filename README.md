@@ -11,12 +11,6 @@ Real-time air pollution monitoring system for Budapest using OpenWeatherMap API.
 - ✅ CSV data storage for analysis
 - ✅ Trend analysis and statistics
 
-## 🚀 Quick Start
-
-### Prerequisites
-```bash
-pip install requests matplotlib pandas
-
 🛠️ Technologies
 Component	Technology
 Backend	Python 3.x
@@ -31,3 +25,11 @@ PM2.5	15 µg/m³
 PM10	45 µg/m³
 NO₂	25 µg/m³
 O₃	100 µg/m³
+
+## 🚀 Quick Start
+python air_monitor.py
+
+### Prerequisites
+```bash
+pip install requests matplotlib pandas
+
