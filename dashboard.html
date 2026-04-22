@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Budapest Air Quality Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Header Section */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 20px;
+        }
+        
+        /* Refresh Button */
+        .refresh-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        
+        .refresh-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        /* Cards Row - Horizontal scroll on small screens */
+        .cards-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+        
+        .cards {
+            display: flex;
+            gap: 20px;
+            min-width: min-content;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            transition: transform 0.3s;
+            min-width: 180px;
+            flex: 1;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .card .unit {
+            font-size: 0.8em;
+            color: #666;
+        }
+        
+        .card .status {
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .good { color: #27ae60; }
+        .moderate { color: #f39c12; }
+        .poor { color: #e74c3c; }
+        
+        /* Warning Box */
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        
+        .warning-box h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        /* Chart Containers - Stacked vertically */
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .chart-container h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            min-height: 400px;
+        }
+        
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        /* Table Section */
+        .table-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .table-section h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        /* Scrollable table body */
+        .table-wrapper {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .last-update {
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            margin-top: 20px;
+            font-size: 0.9em;
+            padding-bottom: 20px;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            margin-top: 30px;
+            font-size: 0.8em;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.5);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.8);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .cards {
+                flex-wrap: wrap;
+            }
+            .card {
+                min-width: calc(50% - 10px);
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 Budapest Air Quality Monitor</h1>
+            <div class="subtitle">Real-time pollution data from OpenWeatherMap API | Scrollable Dashboard</div>
+            <button class="refresh-btn" onclick="loadData()">🔄 Refresh Data</button>
+        </div>
+        
+        <div id="warnings"></div>
+        
+        <!-- Cards Section -->
+        <div class="cards-container">
+            <div class="cards" id="cards">
+                <div class="card">Loading data...</div>
+            </div>
+        </div>
+        
+        <!-- Graph 1: PM2.5 & PM10 - Full width -->
+        <div class="chart-container">
+            <h3>🌫️ Particulate Matter (PM2.5 & PM10)</h3>
+            <div class="chart-wrapper">
+                <canvas id="pmChart" width="800" height="400" style="width:100%; height:auto; max-width:100%;"></canvas>
+            </div>
+        </div>
+        
+        <!-- Graph 2: NO₂ & O₃ - Full width -->
+        <div class="chart-container">
+            <h3>💨 Gas Pollutants (NO₂ & O₃)</h3>
+            <div class="chart-wrapper">
+                <canvas id="gasChart" width="800" height="400" style="width:100%; height:auto; max-width:100%;"></canvas>
+            </div>
+        </div>
+        
+        <!-- Graph 3: Air Quality Index - Full width -->
+        <div class="chart-container">
+            <h3>📊 Air Quality Index (1=Good to 5=Very Poor)</h3>
+            <div class="chart-wrapper">
+                <canvas id="aqiChart" width="800" height="400" style="width:100%; height:auto; max-width:100%;"></canvas>
+            </div>
+        </div>
+        
+        <!-- Graph 4: Latest Readings Bar Chart - Full width -->
+        <div class="chart-container">
+            <h3>📊 Latest Readings Distribution</h3>
+            <div class="chart-wrapper">
+                <canvas id="barChart" width="600" height="400" style="width:100%; height:auto; max-width:100%;"></canvas>
+            </div>
+        </div>
+        
+        <!-- Data Table -->
+        <div class="table-section">
+            <h3>📋 Recent Readings (Last 15)</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Time</th><th>PM2.5</th><th>PM10</th><th>NO₂</th><th>O₃</th><th>AQI</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <tr><td colspan="7">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="last-update" id="last-update"></div>
+        <div class="footer">
+            <p>Data source: OpenWeatherMap API | WHO guidelines: PM2.5 >15, PM10 >45, NO₂ >25, O₃ >100</p>
+        </div>
+    </div>
+    
+    <script>
+        let pmChart = null;
+        let gasChart = null;
+        let aqiChart = null;
+        let barChart = null;
+        
+        function getAQIStatus(aqi) {
+            if (aqi <= 2) return { text: "Good", class: "good" };
+            if (aqi == 3) return { text: "Moderate", class: "moderate" };
+            return { text: "Poor", class: "poor" };
+        }
+        
+        async function loadData() {
+            try {
+                const response = await fetch('pollution_data.csv?' + new Date().getTime());
+                const csvText = await response.text();
+                
+                const lines = csvText.split('\n');
+                const data = [];
+                
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim()) {
+                        const values = lines[i].split(',');
+                        if (values.length >= 9) {
+                            data.push({
+                                time: values[0],
+                                city: values[1],
+                                pm25: parseFloat(values[2]),
+                                pm10: parseFloat(values[3]),
+                                no2: parseFloat(values[4]),
+                                o3: parseFloat(values[5]),
+                                aqi: parseInt(values[8])
+                            });
+                        }
+                    }
+                }
+                
+                if (data.length === 0) {
+                    document.getElementById('table-body').innerHTML = '<tr><td colspan="7">No data yet. Run python air_monitor.py first!</td></tr>';
+                    return;
+                }
+                
+                const latest = data[data.length - 1];
+                const aqiStatus = getAQIStatus(latest.aqi);
+                
+                // Update cards
+                const cardsHtml = `
+                    <div class="card">
+                        <h3>🌫️ PM2.5</h3>
+                        <div class="value">${latest.pm25}</div>
+                        <div class="unit">µg/m³</div>
+                        <div class="status ${latest.pm25 > 15 ? 'poor' : latest.pm25 > 10 ? 'moderate' : 'good'}">
+                            ${latest.pm25 > 15 ? '⚠️ High' : latest.pm25 > 10 ? 'Moderate' : '✓ Good'}
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>🍃 PM10</h3>
+                        <div class="value">${latest.pm10}</div>
+                        <div class="unit">µg/m³</div>
+                        <div class="status ${latest.pm10 > 45 ? 'poor' : latest.pm10 > 30 ? 'moderate' : 'good'}">
+                            ${latest.pm10 > 45 ? '⚠️ High' : latest.pm10 > 30 ? 'Moderate' : '✓ Good'}
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>💨 NO₂</h3>
+                        <div class="value">${latest.no2}</div>
+                        <div class="unit">µg/m³</div>
+                        <div class="status ${latest.no2 > 25 ? 'poor' : 'good'}">
+                            ${latest.no2 > 25 ? '⚠️ High' : '✓ Good'}
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>🌫️ O₃</h3>
+                        <div class="value">${latest.o3}</div>
+                        <div class="unit">µg/m³</div>
+                        <div class="status ${latest.o3 > 100 ? 'poor' : 'good'}">
+                            ${latest.o3 > 100 ? '⚠️ High' : '✓ Good'}
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>📊 AQI</h3>
+                        <div class="value">${latest.aqi}</div>
+                        <div class="unit">${aqiStatus.text}</div>
+                        <div class="status ${aqiStatus.class}">
+                            ${latest.aqi >= 4 ? '⚠️ Unhealthy' : '✓ Acceptable'}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('cards').innerHTML = cardsHtml;
+                
+                // Warnings
+                const warnings = [];
+                if (latest.pm25 > 15) warnings.push(`PM2.5 is ${latest.pm25} µg/m³ (WHO limit: 15)`);
+                if (latest.pm10 > 45) warnings.push(`PM10 is ${latest.pm10} µg/m³ (WHO limit: 45)`);
+                if (latest.no2 > 25) warnings.push(`NO₂ is ${latest.no2} µg/m³ (WHO limit: 25)`);
+                if (latest.o3 > 100) warnings.push(`O₃ is ${latest.o3} µg/m³ (WHO limit: 100)`);
+                if (latest.aqi >= 4) warnings.push(`Air Quality is ${aqiStatus.text} (AQI: ${latest.aqi})`);
+                
+                if (warnings.length > 0) {
+                    document.getElementById('warnings').innerHTML = `
+                        <div class="warning-box">
+                            <h4>⚠️ Air Quality Warnings</h4>
+                            <ul>${warnings.map(w => `<li>${w}</li>`).join('')}</ul>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('warnings').innerHTML = `
+                        <div class="warning-box" style="background: #d4edda; border-left-color: #28a745;">
+                            <h4>✅ Air Quality is Safe</h4>
+                            <p>All pollutants within WHO guidelines</p>
+                        </div>
+                    `;
+                }
+                
+                // Prepare data for charts
+                const times = data.map(d => new Date(d.time).toLocaleTimeString());
+                const pm25Data = data.map(d => d.pm25);
+                const pm10Data = data.map(d => d.pm10);
+                const no2Data = data.map(d => d.no2);
+                const o3Data = data.map(d => d.o3);
+                const aqiData = data.map(d => d.aqi);
+                
+                // Graph 1: PM2.5 & PM10
+                if (pmChart) pmChart.destroy();
+                const pmCtx = document.getElementById('pmChart').getContext('2d');
+                pmChart = new Chart(pmCtx, {
+                    type: 'line',
+                    data: {
+                        labels: times,
+                        datasets: [
+                            { label: 'PM2.5', data: pm25Data, borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.1)', tension: 0.3, fill: true },
+                            { label: 'PM10', data: pm10Data, borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.1)', tension: 0.3, fill: true }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { position: 'top' } }
+                    }
+                });
+                
+                // Graph 2: NO₂ & O₃
+                if (gasChart) gasChart.destroy();
+                const gasCtx = document.getElementById('gasChart').getContext('2d');
+                gasChart = new Chart(gasCtx, {
+                    type: 'line',
+                    data: {
+                        labels: times,
+                        datasets: [
+                            { label: 'NO₂', data: no2Data, borderColor: '#2ecc71', backgroundColor: 'rgba(46,204,113,0.1)', tension: 0.3, fill: true },
+                            { label: 'O₃', data: o3Data, borderColor: '#f39c12', backgroundColor: 'rgba(243,156,18,0.1)', tension: 0.3, fill: true }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { position: 'top' } }
+                    }
+                });
+                
+                // Graph 3: AQI
+                if (aqiChart) aqiChart.destroy();
+                const aqiCtx = document.getElementById('aqiChart').getContext('2d');
+                aqiChart = new Chart(aqiCtx, {
+                    type: 'line',
+                    data: {
+                        labels: times,
+                        datasets: [{ label: 'AQI', data: aqiData, borderColor: '#9b59b6', backgroundColor: 'rgba(155,89,182,0.1)', tension: 0.3, fill: true }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { position: 'top' } }
+                    }
+                });
+                
+                // Graph 4: Bar Chart
+                if (barChart) barChart.destroy();
+                const barCtx = document.getElementById('barChart').getContext('2d');
+                barChart = new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['PM2.5', 'PM10', 'NO₂', 'O₃'],
+                        datasets: [{
+                            data: [latest.pm25, latest.pm10, latest.no2, latest.o3],
+                            backgroundColor: ['#e74c3c', '#3498db', '#2ecc71', '#f39c12']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+                
+                // Update table
+                const tableHtml = data.slice(-15).reverse().map(row => {
+                    const status = getAQIStatus(row.aqi);
+                    return `<tr>
+                        <td>${new Date(row.time).toLocaleTimeString()}</td>
+                        <td>${row.pm25}</td>
+                        <td>${row.pm10}</td>
+                        <td>${row.no2}</td>
+                        <td>${row.o3}</td>
+                        <td>${row.aqi}</td>
+                        <td class="${status.class}">${status.text}</td>
+                    </tr>`;
+                }).join('');
+                document.getElementById('table-body').innerHTML = tableHtml;
+                
+                document.getElementById('last-update').innerHTML = `Last updated: ${new Date().toLocaleString()}`;
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('table-body').innerHTML = '<tr><td colspan="7">Error loading data. Make sure pollution_data.csv exists. Run python air_monitor.py first!</td></tr>';
+            }
+        }
+        
+        // Load data initially and every 30 seconds
+        loadData();
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
