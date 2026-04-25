@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import time
 
-API_KEY = "67ec64d4bb792676559a57ec64c7a080"  
+API_KEY = "Your_key"  
 
 # Budapest coordinates
 LATITUDE = 47.4979   # Budapest
